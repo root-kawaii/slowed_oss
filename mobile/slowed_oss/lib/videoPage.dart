@@ -190,8 +190,6 @@ class _VideoDetailsPageState extends State<VideoDetailsPage> {
 // }
 
 // class _VideoDetailsPageState extends State<VideoDetailsPage> {
-//   final String apiKey =
-//       'AIzaSyAXzP5MfeEu-3WPv7-W9DYm5D-Ucv5Mdr4'; // Replace with your API key
 //   Map<String, dynamic>? _videoDetails;
 //   bool _isProcessingAudio = false;
 //   bool _isPlaying = false;
