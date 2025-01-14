@@ -128,7 +128,8 @@ class _VideoDetailsPageState extends State<VideoDetailsPage> {
       ),
       body: _videoDetails == null
           ? Center(child: CircularProgressIndicator())
-          : Padding(
+          : SingleChildScrollView(
+              child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,7 +169,7 @@ class _VideoDetailsPageState extends State<VideoDetailsPage> {
                         ),
                 ],
               ),
-            ),
+            )),
     );
   }
 }
