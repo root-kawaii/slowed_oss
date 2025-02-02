@@ -18,14 +18,19 @@ type RequestBody struct {
 func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-        fmt.Fprintln(w, "Welcome to the server!")
-    })
+		fmt.Fprintln(w, "Welcome to the server!")
+	})
 
 	http.HandleFunc("/submit", handleYouTubeLink)
 
+	port := os.Getenv("PORT") // Get PORT from Render
+	if port == "" {
+		port = "8080" // Default to 8080 locally
+	}
+
 	// Start the server on port 8080
-	fmt.Println("Server is running on port 3306...")
-	if err := http.ListenAndServe(":3306", nil); err != nil {
+	fmt.Println("Server is running on port " + port)
+	if err := http.ListenAndServe(port, nil); err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
 }
