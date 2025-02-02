@@ -45,7 +45,8 @@ class _VideoDetailsPageState extends State<VideoDetailsPage> {
 
   Future<void> retrieveAudio() async {
     final url = Uri.parse(
-        'https://localhost:8080/submit'); // Replace with your server's IP
+        'https://slowed-oss.onrender.com:8080/submit'); // Ensure it's the correct URL
+
     final youTubeLink =
         'https://www.youtube.com/watch?v=${widget.videoId}'; // Construct YouTube link
 
@@ -61,15 +62,25 @@ class _VideoDetailsPageState extends State<VideoDetailsPage> {
       );
 
       if (response.statusCode == 200) {
-        // Save or use the audio file from response
-        final audioData = response.bodyBytes;
-        final file = await _saveAudioFile(audioData);
-        setState(() {
-          _audioFilePath = file.path;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Audio processed and saved: ${file.path}')),
-        );
+        // Check if the response is of the expected type (audio file)
+        if (response.headers['content-type']?.startsWith('audio/') ?? false) {
+          final audioData =
+              response.bodyBytes; // Get binary data for the audio file
+
+          // Save the audio file to local storage
+          final file = await _saveAudioFile(audioData);
+
+          setState(() {
+            _audioFilePath = file.path;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Audio processed and saved: ${file.path}')),
+          );
+        } else {
+          // If the response is not an audio file, show an error
+          throw Exception('Expected audio response but got: ${response.body}');
+        }
       } else {
         throw Exception('Failed to process audio: ${response.body}');
       }
