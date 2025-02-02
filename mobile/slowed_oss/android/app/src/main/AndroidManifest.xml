@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Permission to access the internet -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:label="slowed_oss"
         android:name="${applicationName}"
