@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 )
 
@@ -17,6 +18,16 @@ type RequestBody struct {
 }
 
 func main() {
+	// Get the current directory of the Go program
+	execDir, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Error getting current directory: %v", err)
+	}
+
+	// Paths to the certificate and key files in the current directory
+	certFile := filepath.Join(execDir, "cert.pem")
+	keyFile := filepath.Join(execDir, "key.pem")
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Welcome to the HTTPS server!")
 	})
@@ -39,10 +50,7 @@ func main() {
 
 	fmt.Println("🚀 HTTPS Server is running on port " + port)
 
-	// Use self-signed certs for local testing (or provide real certs)
-	certFile := "cert.pem"
-	keyFile := "key.pem"
-
+	// Check if the certificate and key files exist in the current directory
 	if _, err := os.Stat(certFile); os.IsNotExist(err) {
 		fmt.Println("⚠️ No SSL certs found! Generate self-signed certs with:")
 		fmt.Println("   openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes")
@@ -50,7 +58,7 @@ func main() {
 	}
 
 	// Start the HTTPS server
-	err := server.ListenAndServeTLS(certFile, keyFile)
+	err = server.ListenAndServeTLS(certFile, keyFile)
 	if err != nil {
 		log.Fatalf("Error starting HTTPS server: %v", err)
 	}
