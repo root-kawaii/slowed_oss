@@ -45,7 +45,7 @@ class _VideoDetailsPageState extends State<VideoDetailsPage> {
 
   Future<void> retrieveAudio() async {
     final url = Uri.parse(
-        'http://localhost:8080/submit'); // Replace with your server's IP
+        'https://slowed-oss.onrender.com:10000/submit'); // Replace with your server's IP
     final youTubeLink =
         'https://www.youtube.com/watch?v=${widget.videoId}'; // Construct YouTube link
 

@@ -25,7 +25,7 @@ func main() {
 
 	port := os.Getenv("PORT") // Get PORT from Render
 	if port == "" {
-		port = "8080" // Default to 8080 locally
+		port = "10000" // Default to 8080 locally
 	}
 
 	// Start the server on port 8080
