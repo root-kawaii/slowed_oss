@@ -32,6 +32,7 @@ func main() {
 	fmt.Println("Server is running on port " + port)
 	if err := http.ListenAndServe(port, nil); err != nil {
 		log.Fatalf("Error starting server: %v", err)
+
 	}
 }
 
