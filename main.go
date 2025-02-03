@@ -1,14 +1,12 @@
 package main
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"time"
 )
 
@@ -18,49 +16,22 @@ type RequestBody struct {
 }
 
 func main() {
-	// Get the current directory of the Go program
-	execDir, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Error getting current directory: %v", err)
-	}
-
-	// Paths to the certificate and key files in the current directory
-	certFile := filepath.Join(execDir, "cert.pem")
-	keyFile := filepath.Join(execDir, "key.pem")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Welcome to the HTTPS server!")
+		fmt.Fprintln(w, "Welcome to the server!")
 	})
 
 	http.HandleFunc("/submit", handleYouTubeLink)
 
-	port := os.Getenv("PORT") // Get PORT from Render/Railway/etc.
+	port := os.Getenv("PORT") // Get PORT from Render
 	if port == "" {
-		port = "8080" // Default for local testing
+		port = "8080" // Default to 8080 locally
 	}
 
-	// HTTPS Server Configuration
-	server := &http.Server{
-		Addr:    ":" + port,
-		Handler: nil, // Default handlers
-		TLSConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12, // Enforce modern TLS
-		},
-	}
-
-	fmt.Println("🚀 HTTPS Server is running on port " + port)
-
-	// Check if the certificate and key files exist in the current directory
-	if _, err := os.Stat(certFile); os.IsNotExist(err) {
-		fmt.Println("⚠️ No SSL certs found! Generate self-signed certs with:")
-		fmt.Println("   openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes")
-		os.Exit(1)
-	}
-
-	// Start the HTTPS server
-	err = server.ListenAndServeTLS(certFile, keyFile)
-	if err != nil {
-		log.Fatalf("Error starting HTTPS server: %v", err)
+	// Start the server on port 8080
+	fmt.Println("Server is running on port " + port)
+	if err := http.ListenAndServe(port, nil); err != nil {
+		log.Fatalf("Error starting server: %v", err)
 	}
 }
 
