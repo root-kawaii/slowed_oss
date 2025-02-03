@@ -16,6 +16,11 @@ type RequestBody struct {
 }
 
 func main() {
+	// Get PORT from environment variable
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Default to 8080 if not set
+	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Welcome to the server!")
@@ -23,16 +28,10 @@ func main() {
 
 	http.HandleFunc("/submit", handleYouTubeLink)
 
-	port := os.Getenv("PORT") // Get PORT from Render
-	if port == "" {
-		port = "8080" // Default to 8080 locally
-	}
-
-	// Start the server on port 8080
+	// Start the server on the correct port
 	fmt.Println("Server is running on port " + port)
-	if err := http.ListenAndServe(port, nil); err != nil {
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatalf("Error starting server: %v", err)
-
 	}
 }
 
