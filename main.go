@@ -94,7 +94,7 @@ func fetchYouTubeAudio(link string) (string, error) {
 	outputFile := fmt.Sprintf("files/audio_%s.mp3", timestamp[8:14])
 
 	// Construct the yt-dlp command
-	cmd := exec.Command("yt-dlp", "--cookies cookies-youtube.txt", "--extract-audio", "--audio-format", "mp3", "-o", outputFile, link)
+	cmd := exec.Command("yt-dlp", "--cookies", "cookies-youtube.txt", "--extract-audio", "--audio-format", "mp3", "-o", outputFile, link)
 
 	// Set the command's output to os.Stdout for logging
 	cmd.Stdout = os.Stdout
