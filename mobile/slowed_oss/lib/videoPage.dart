@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'dart:io';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class VideoDetailsPage extends StatefulWidget {
@@ -18,8 +17,14 @@ class _VideoDetailsPageState extends State<VideoDetailsPage> {
   final String apiKey = dotenv.env['YOUTUBE_API_KEY'] ?? '';
   Map<String, dynamic>? _videoDetails;
   bool _isProcessingAudio = false;
-  String? _audioFilePath;
   final AudioPlayer _audioPlayer = AudioPlayer();
+  String? _audioStreamUrl; // Store stream URL
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchVideoDetails();
+  }
 
   Future<void> _fetchVideoDetails() async {
     final url = Uri.parse(
@@ -37,18 +42,13 @@ class _VideoDetailsPageState extends State<VideoDetailsPage> {
         throw Exception('Failed to fetch video details');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching video details: $e')),
-      );
+      _showError('Error fetching video details: $e');
     }
   }
 
   Future<void> retrieveAudio() async {
-    final url = Uri.parse(
-        'https://localhost:8080/submit'); // Ensure it's the correct URL
-
-    final youTubeLink =
-        'https://www.youtube.com/watch?v=${widget.videoId}'; // Construct YouTube link
+    final url = Uri.parse('https://13.60.207.78:8080/submit');
+    final youTubeLink = 'https://www.youtube.com/watch?v=${widget.videoId}';
 
     setState(() {
       _isProcessingAudio = true;
@@ -62,32 +62,30 @@ class _VideoDetailsPageState extends State<VideoDetailsPage> {
       );
 
       if (response.statusCode == 200) {
-        // Check if the response is of the expected type (audio file)
-        if (response.headers['content-type']?.startsWith('audio/') ?? false) {
-          final audioData =
-              response.bodyBytes; // Get binary data for the audio file
+        final contentType = response.headers['content-type'];
 
-          // Save the audio file to local storage
-          final file = await _saveAudioFile(audioData);
+        if (contentType != null && contentType.startsWith('audio/')) {
+          // Extract the audio stream URL from the response
+          final responseJson = json.decode(response.body);
+          final streamUrl = responseJson[
+              'audio_url']; // Assuming the backend provides the URL in this key
 
-          setState(() {
-            _audioFilePath = file.path;
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Audio processed and saved: ${file.path}')),
-          );
+          if (streamUrl != null) {
+            setState(() {
+              _audioStreamUrl = streamUrl;
+            });
+            _showMessage('Audio processed successfully. Tap play to listen.');
+          } else {
+            throw Exception('No audio URL returned from the server');
+          }
         } else {
-          // If the response is not an audio file, show an error
-          throw Exception('Expected audio response but got: ${response.body}');
+          throw Exception('Invalid audio response: ${response.body}');
         }
       } else {
         throw Exception('Failed to process audio: ${response.body}');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error processing audio: $e')),
-      );
+      _showError('Error processing audio: $e');
     } finally {
       setState(() {
         _isProcessingAudio = false;
@@ -95,21 +93,12 @@ class _VideoDetailsPageState extends State<VideoDetailsPage> {
     }
   }
 
-  Future<File> _saveAudioFile(List<int> audioData) async {
-    final directory = await Directory.systemTemp.createTemp();
-    final filePath = '${directory.path}/processed_audio.mp3';
-    final file = File(filePath);
-    await file.writeAsBytes(audioData);
-    return file;
-  }
-
   void _playAudio() async {
-    if (_audioFilePath != null) {
-      await _audioPlayer.play(DeviceFileSource(_audioFilePath!));
+    if (_audioStreamUrl != null) {
+      await _audioPlayer.setUrl(_audioStreamUrl!);
+      await _audioPlayer.play();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No audio file available to play.')),
-      );
+      _showError('No audio file available to play.');
     }
   }
 
@@ -117,30 +106,29 @@ class _VideoDetailsPageState extends State<VideoDetailsPage> {
     await _audioPlayer.pause();
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchVideoDetails();
-    retrieveAudio(); // Automatically call the function when page loads
+  void _showError(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   void dispose() {
-    _audioPlayer
-        .dispose(); // Dispose of the audio player when the widget is removed
+    _audioPlayer.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Video Details'),
-      ),
+      appBar: AppBar(title: Text('Video Details')),
       body: _videoDetails == null
           ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Padding(
+          : Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,7 +153,7 @@ class _VideoDetailsPageState extends State<VideoDetailsPage> {
                               onPressed: retrieveAudio,
                               child: Text('Retrieve Processed Audio'),
                             ),
-                            if (_audioFilePath != null) ...[
+                            if (_audioStreamUrl != null) ...[
                               SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: _playAudio,
@@ -175,172 +163,12 @@ class _VideoDetailsPageState extends State<VideoDetailsPage> {
                                 onPressed: _pauseAudio,
                                 child: Text('Pause Audio'),
                               ),
-                            ]
+                            ],
                           ],
                         ),
                 ],
               ),
-            )),
+            ),
     );
   }
 }
-
-
-// import 'package:flutter/material.dart';
-// import 'dart:convert';
-// import 'package:http/http.dart' as http;
-// import 'dart:io';
-// import 'package:just_audio/just_audio.dart';
-
-// class VideoDetailsPage extends StatefulWidget {
-//   final String videoId;
-
-//   VideoDetailsPage({required this.videoId});
-
-//   @override
-//   _VideoDetailsPageState createState() => _VideoDetailsPageState();
-// }
-
-// class _VideoDetailsPageState extends State<VideoDetailsPage> {
-//   Map<String, dynamic>? _videoDetails;
-//   bool _isProcessingAudio = false;
-//   bool _isPlaying = false;
-//   late AudioPlayer _audioPlayer;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _fetchVideoDetails();
-//     _audioPlayer = AudioPlayer();
-//   }
-
-//   Future<void> _fetchVideoDetails() async {
-//     final url = Uri.parse(
-//       'https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${widget.videoId}&key=$apiKey',
-//     );
-
-//     try {
-//       final response = await http.get(url);
-//       if (response.statusCode == 200) {
-//         final data = json.decode(response.body);
-//         setState(() {
-//           _videoDetails = data['items'][0];
-//         });
-//       } else {
-//         throw Exception('Failed to fetch video details');
-//       }
-//     } catch (e) {
-//       ScaffoldMessenger.of(context).showSnackBar(
-//         SnackBar(content: Text('Error fetching video details: $e')),
-//       );
-//     }
-//   }
-
-//   Future<void> retrieveAudio() async {
-//     final url = Uri.parse(
-//         'http://localhost:8080/submit'); // Replace with your server's IP
-//     final youTubeLink =
-//         'https://www.youtube.com/watch?v=${widget.videoId}'; // Construct YouTube link
-
-//     setState(() {
-//       _isProcessingAudio = true;
-//     });
-
-//     try {
-//       final response = await http.post(
-//         url,
-//         headers: {'Content-Type': 'application/json'},
-//         body: json.encode({'youtube_link': youTubeLink}),
-//       );
-
-//       if (response.statusCode == 200) {
-//         // Get the audio file URL or stream URL from the response.
-//         // For this example, we'll assume the response contains the URL for the audio stream.
-//         final audioStreamUrl =
-//             response.body; // Assuming the server returns the stream URL
-
-//         // Start streaming the audio
-//         await _startStreaming(audioStreamUrl);
-//       } else {
-//         throw Exception('Failed to process audio: ${response.body}');
-//       }
-//     } catch (e) {
-//       ScaffoldMessenger.of(context).showSnackBar(
-//         SnackBar(content: Text('Error processing audio: $e')),
-//       );
-//     } finally {
-//       setState(() {
-//         _isProcessingAudio = false;
-//       });
-//     }
-//   }
-
-//   Future<void> _startStreaming(String url) async {
-//     try {
-//       await _audioPlayer.setUrl(url); // Start streaming from the provided URL
-//       await _audioPlayer.play(); // Start playing the audio as soon as possible
-//       setState(() {
-//         _isPlaying = true;
-//       });
-//     } catch (e) {
-//       ScaffoldMessenger.of(context).showSnackBar(
-//         SnackBar(content: Text('Error starting audio stream: $e')),
-//       );
-//     }
-//   }
-
-//   @override
-//   void dispose() {
-//     super.dispose();
-//     _audioPlayer.dispose();
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text('Video Details'),
-//       ),
-//       body: _videoDetails == null
-//           ? Center(child: CircularProgressIndicator())
-//           : Padding(
-//               padding: const EdgeInsets.all(16.0),
-//               child: Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   Text(
-//                     _videoDetails!['snippet']['title'],
-//                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-//                   ),
-//                   SizedBox(height: 16),
-//                   Text(_videoDetails!['snippet']['description']),
-//                   SizedBox(height: 16),
-//                   Text(
-//                     'Views: ${_videoDetails!['statistics']['viewCount']}',
-//                     style: TextStyle(fontWeight: FontWeight.bold),
-//                   ),
-//                   SizedBox(height: 24),
-//                   _isProcessingAudio
-//                       ? CircularProgressIndicator()
-//                       : ElevatedButton(
-//                           onPressed: retrieveAudio,
-//                           child: Text('Retrieve Processed Audio'),
-//                         ),
-//                   SizedBox(height: 24),
-//                   if (_isPlaying)
-//                     ElevatedButton(
-//                       onPressed: () async {
-//                         await _audioPlayer.stop();
-//                         setState(() {
-//                           _isPlaying = false;
-//                         });
-//                       },
-//                       child: Text('Stop Audio'),
-//                     ),
-//                 ],
-//               ),
-//             ),
-//     );
-//   }
-// }
-
